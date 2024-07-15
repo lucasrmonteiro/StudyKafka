@@ -1,0 +1,82 @@
+﻿services:
+  studykafka.producer:
+    image: studykafka.producer
+    build:
+      context: .
+      dockerfile: StudyKafka.Producer/Dockerfile
+    depends_on:
+      - kafka
+    networks:
+      - broker-kafka  
+      
+  studykafka.consumer:
+    image: studykafka.consumer
+    build:
+      context: .
+      dockerfile: StudyKafka.Consumer/Dockerfile
+    depends_on:
+      - kafka
+      - postgres
+    networks:
+     - broker-kafka
+     - database
+  
+  postgres:
+    image: postgres:latest
+    container_name: StudyKafka-database
+    environment:
+      POSTGRES_DB: StudyKafka
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 123
+    ports:
+      - "5432:5432"
+    networks:
+      - database
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+  
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    networks:
+      - broker-kafka
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+  
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    networks:
+      - broker-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - 9092:9092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CREATE_TOPICS: "account-topic:1:1"
+      
+  kafdrop:
+    image: obsidiandynamics/kafdrop:latest
+    networks:
+      - broker-kafka
+    depends_on:
+      - kafka
+    ports:
+      - 19000:9000
+    environment:
+      KAFKA_BROKERCONNECT: kafka:9092    
+      
+networks:
+  broker-kafka:
+    driver: bridge      
+  database:
+    driver: bridge      
+    
+volumes:
+    postgres-data:
+
+
